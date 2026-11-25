@@ -2,6 +2,8 @@
 
 **Network visibility. Security through insight.**
 
+[![Live Preview](https://img.shields.io/badge/Live-Preview-0891b2?style=for-the-badge)](https://techieengineer.github.io/netspectra/)
+
 [![CI and security](https://github.com/TechieEngineer/netspectra/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/TechieEngineer/netspectra/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Release status](https://img.shields.io/badge/status-v1.0.0--rc.1-orange)
