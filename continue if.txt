@@ -1,0 +1,25 @@
+3. How to restart development after six months
+
+powershell:
+
+cd D:\
+mkdir Development
+cd Development
+
+git clone https://github.com/TechieEngineer/netspectra.git
+cd netspectra
+code .
+
+
+Review README.md, VERIFICATION.md and SECURITY.md before installing dependencies. The Go and Node.js version requirements may have changed by then.
+
+
+go mod tidy
+cd web
+npm ci
+npm run build
+cd ..
+
+Followed by the verification script:
+
+powershell -NoProfile -ExecutionPolicy RemoteSigned -File scripts/verify.ps1
