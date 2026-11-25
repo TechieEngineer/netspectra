@@ -1,0 +1,64 @@
+name: Release builds
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+jobs:
+  verify:
+    uses: ./.github/workflows/ci.yml
+  build:
+    needs: verify
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [linux-amd64, linux-arm64, windows-amd64, darwin-arm64]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci && npm run build
+        working-directory: web
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+          cache: false
+      - name: Cross compile
+        env:
+          TARGET: ${{ matrix.target }}
+          TAG: ${{ github.ref_name }}
+          CGO_ENABLED: '0'
+        run: |
+          set -eu
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$ ]]
+          export GOOS=${TARGET%-*} GOARCH=${TARGET#*-}
+          suffix=''; if [ "$GOOS" = windows ]; then suffix='.exe'; fi
+          mkdir -p out
+          go build -mod=readonly -trimpath -ldflags="-s -w -X main.version=${TAG#v}" -o "out/netspectra-$TARGET$suffix" ./cmd/netspectra
+          (cd out && sha256sum netspectra-* > "checksums-$TARGET.txt")
+      - uses: actions/upload-artifact@v4
+        with:
+          name: netspectra-${{ matrix.target }}
+          path: out/*
+  draft:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: netspectra-*
+          path: out
+          merge-multiple: true
+      - name: Create draft release for human review
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -eu
+          args=()
+          if [[ "$TAG" == *-* ]]; then args+=(--prerelease); fi
+          gh release create "$TAG" out/* --draft --verify-tag --generate-notes "${args[@]}"

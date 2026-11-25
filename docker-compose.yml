@@ -1,0 +1,19 @@
+services:
+  netspectra:
+    build: .
+    network_mode: host
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs:
+      - /tmp
+    volumes:
+      - netscan-data:/data
+    environment:
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      WEBHOOK_DISCORD_URL: ${WEBHOOK_DISCORD_URL:-}
+      WEBHOOK_SLACK_URL: ${WEBHOOK_SLACK_URL:-}
+      WEBHOOK_GENERIC_URL: ${WEBHOOK_GENERIC_URL:-}
+volumes:
+  netscan-data:

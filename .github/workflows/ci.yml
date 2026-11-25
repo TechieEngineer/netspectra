@@ -1,0 +1,51 @@
+name: CI and security
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+          cache: false
+      - name: Require dependency lockfiles
+        run: test -s go.sum && test -s web/package-lock.json
+      - name: Frontend build and vulnerability check
+        working-directory: web
+        run: npm ci && npm audit --audit-level=moderate && npm run build
+      - run: go mod verify
+      - run: go vet ./...
+      - run: go test -mod=readonly -race -count=1 ./...
+      - run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+      - run: CGO_ENABLED=0 go build -mod=readonly -trimpath -o netspectra ./cmd/netspectra
+      - name: Native startup smoke test
+        run: |
+          set -eu
+          ./netspectra --version
+          ./netspectra --db "$RUNNER_TEMP/native.db" --port 18080 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true; wait "$pid" 2>/dev/null || true' EXIT
+          curl --fail --retry 15 --retry-connrefused --retry-delay 1 http://127.0.0.1:18080/api/v1/status
+          curl --fail http://127.0.0.1:18080/ | grep -q 'id="root"'
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:18080/api/v1/hosts)" = 401
+      - name: Docker build and smoke test
+        run: |
+          set -eu
+          docker compose config --quiet
+          docker compose build
+          trap 'docker compose down -v' EXIT
+          docker compose up -d
+          curl --fail --retry 20 --retry-connrefused --retry-delay 1 http://127.0.0.1:8080/api/v1/status
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/api/v1/hosts)" = 401
+          test "$(docker compose exec -T netspectra id -u)" = 10001

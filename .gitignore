@@ -1,0 +1,15 @@
+/data/
+/bin/
+*.db
+*.db-wal
+*.db-shm
+.env
+*.pem
+*.key
+/web/node_modules/
+/web/dist/*
+!/web/dist/.gitkeep
+
+*.db.lock/
+/out/
+*.log
