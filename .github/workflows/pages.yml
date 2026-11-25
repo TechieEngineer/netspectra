@@ -27,7 +27,9 @@ jobs:
           mkdir -p _site
           cp docs/index.html docs/style.css _site/
           sed -i "s|REPOSITORY_URL|https://github.com/$REPO|g" _site/index.html
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v4
+  with:
+    path: _site
         with:
           path: _site
       - uses: actions/deploy-pages@v4
